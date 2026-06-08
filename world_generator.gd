@@ -1,0 +1,80 @@
+extends Node
+class_name WorldGenerator
+
+var GENERATION_BOUND_DISTANCE = 64
+var VERTICAL_AMPLITUDE = 7
+var noise
+var player
+var generated_cubes
+
+func _ready():
+	generated_cubes = {}
+	noise = FastNoiseLite.new()
+	player = get_node("../Player")
+	generate_new_cubes_from_position(player.position)
+
+func _process(delta):
+	generate_new_cubes_from_position(player.position)
+
+func create_cube(position, color):
+	var box_size = Vector3(1, 1, 1)
+
+	var static_body = StaticBody3D.new()
+	static_body.position = position
+
+	var collision_shape_3d = CollisionShape3D.new()
+	collision_shape_3d.shape = BoxShape3D.new()
+	collision_shape_3d.shape.size = box_size
+
+	var mesh = MeshInstance3D.new()
+
+	var boxmesh = BoxMesh.new()
+	boxmesh.size = box_size
+
+	var material = StandardMaterial3D.new()
+	material.albedo_color = color
+
+	boxmesh.material = material
+
+	mesh.set_mesh(boxmesh)
+	static_body.add_child(mesh)
+	static_body.add_child(collision_shape_3d)
+
+	add_child(static_body)
+
+func generate_new_cubes_from_position(player_position):
+	for x in range(GENERATION_BOUND_DISTANCE * 2):
+		x += (player_position.x - GENERATION_BOUND_DISTANCE)
+		for z in range(GENERATION_BOUND_DISTANCE * 2):
+			z += (player_position.z - GENERATION_BOUND_DISTANCE)
+			generate_cube_if_new(x, z)
+
+func generate_cube_if_new(x, z):
+	if !has_cube_been_generated(x, z):
+		var generated_noise = noise.get_noise_2d(x, z)
+		create_cube(Vector3(x, generated_noise * VERTICAL_AMPLITUDE, z), get_color_from_noise(generated_noise))
+		register_cube_generation_at_coordinate(x, z)
+
+func has_cube_been_generated(x, z):
+	if x in generated_cubes and z in generated_cubes[x] and generated_cubes[x][z] == true:
+		return true
+	else:
+		return false
+
+func register_cube_generation_at_coordinate(x, z):
+	if x in generated_cubes:
+		generated_cubes[x][z] = true
+	else:
+		generated_cubes[x] = {z: true}
+
+func get_color_from_noise(noise_value):
+	if noise_value <= -.4:
+		return Color(1, 0, 0, 1)
+	elif noise_value <= -.2:
+		return Color(0, 1, 0, 1)
+	elif noise_value <= 0:
+		return Color(0, 0, 1, 1)
+	elif noise_value <= .2:
+		return Color(.5, .5, .5, 1)
+	elif noise_value > .2:
+		return Color(.3, .8, .5, 1)
