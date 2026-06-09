@@ -21,6 +21,7 @@ sky = SubResource("Sky_0xm2m")
 
 [node name="World Generator" type="Node" parent="." unique_id=937196888]
 script = ExtResource("1_ig7tw")
+GENERATION_BOUND_DISTANCE = 64
 
 [node name="Player" type="CharacterBody3D" parent="." unique_id=1144966591]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6035173, 0)

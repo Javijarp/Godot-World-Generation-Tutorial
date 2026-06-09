@@ -1,22 +1,31 @@
 extends Node
 class_name WorldGenerator
 
-var GENERATION_BOUND_DISTANCE = 64
-var VERTICAL_AMPLITUDE = 7
+@export var GENERATION_BOUND_DISTANCE = 16
+@export var VERTICAL_AMPLITUDE = 7
 var noise
 var player
 var generated_cubes
+
+var material_cache = {}
 
 func _ready():
 	generated_cubes = {}
 	noise = FastNoiseLite.new()
 	player = get_node("../Player")
+
+	material_cache[-0.4] = create_material(Color(1, 0, 0, 1))
+	material_cache[-0.2] = create_material(Color(0, 1, 0, 1))
+	material_cache[0.0] = create_material(Color(0, 0, 1, 1))
+	material_cache[0.2] = create_material(Color(0.5, 0.5, 0.5, 1))
+	material_cache[1.0] = create_material(Color(0.3, 0.8, 0.5, 1))
+
 	generate_new_cubes_from_position(player.position)
 
 func _process(delta):
 	generate_new_cubes_from_position(player.position)
 
-func create_cube(position, color):
+func create_cube(position, mat):
 	var box_size = Vector3(1, 1, 1)
 
 	var static_body = StaticBody3D.new()
@@ -31,10 +40,7 @@ func create_cube(position, color):
 	var boxmesh = BoxMesh.new()
 	boxmesh.size = box_size
 
-	var material = StandardMaterial3D.new()
-	material.albedo_color = color
-
-	boxmesh.material = material
+	boxmesh.material = mat
 
 	mesh.set_mesh(boxmesh)
 	static_body.add_child(mesh)
@@ -52,7 +58,7 @@ func generate_new_cubes_from_position(player_position):
 func generate_cube_if_new(x, z):
 	if !has_cube_been_generated(x, z):
 		var generated_noise = noise.get_noise_2d(x, z)
-		create_cube(Vector3(x, generated_noise * VERTICAL_AMPLITUDE, z), get_color_from_noise(generated_noise))
+		create_cube(Vector3(x, generated_noise * VERTICAL_AMPLITUDE, z), get_cached_material_from_noise(generated_noise))
 		register_cube_generation_at_coordinate(x, z)
 
 func has_cube_been_generated(x, z):
@@ -66,6 +72,23 @@ func register_cube_generation_at_coordinate(x, z):
 		generated_cubes[x][z] = true
 	else:
 		generated_cubes[x] = {z: true}
+
+func create_material(color):
+	var material = StandardMaterial3D.new()
+	material.albedo_color = color
+	return material
+
+func get_cached_material_from_noise(noise_value):
+	if noise_value <= -0.4:
+		return material_cache[-0.4]
+	elif noise_value <= -.2:
+		return material_cache[-0.2]
+	elif noise_value <= 0:
+		return material_cache[0.0]
+	elif noise_value <= .2:
+		return material_cache[0.2]
+	elif noise_value > .2:
+		return material_cache[1.0]
 
 func get_color_from_noise(noise_value):
 	if noise_value <= -.4:
