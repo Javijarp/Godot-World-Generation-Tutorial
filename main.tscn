@@ -24,6 +24,7 @@ sky = SubResource("Sky_0xm2m")
 mesh_library = ExtResource("3_1bvp3")
 cell_size = Vector3(1, 1, 1)
 script = ExtResource("2_1bvp3")
+ENABLE_CHUNK_DESPAWNING = false
 
 [node name="World Generator" type="Node" parent="." unique_id=937196888]
 

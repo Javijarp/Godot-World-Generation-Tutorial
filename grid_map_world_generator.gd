@@ -1,17 +1,24 @@
 extends GridMap
 class_name GridMapWorldGenerator
 
-@export var GENERATION_BOUND_DISTANCE = 16
-@export var VERTICAL_AMPLITUDE = 7.0
+@export_category("Chunk Settings")
+@export var CHUNK_SIZE: int = 16
+# How many chunks in every direction to load around the player. 2 means a 5x5 chunk grid.
+@export var CHUNK_RENDER_DISTANCE: int = 2 
+@export var ENABLE_CHUNK_DESPAWNING: bool = true
 
-# NEW: Defines how "smooth" the floats look. 
-# 100.0 means the Y-axis moves in increments of 0.01 units.
+@export_category("Terrain Settings")
+@export var VERTICAL_AMPLITUDE: float = 7.0
 @export var VERTICAL_SMOOTHNESS: float = 100.0 
 
-var noise
-var player
+var noise: FastNoiseLite
+var player: Node3D
 
-var last_player_grid_pos = Vector2i.ZERO
+# We now track the player's position in CHUNKS, not individual blocks
+var last_player_chunk = Vector2i(1000000, 1000000) # Set to arbitrary high number to force initial generation
+
+# A dictionary to track which chunks are currently spawned
+var active_chunks: Dictionary = {}
 
 const BLOCK_RED = 0
 const BLOCK_GREEN = 1
@@ -26,44 +33,79 @@ func _ready() -> void:
     if not mesh_library:
         push_error("please assign your MeshLibrary (.tres) to this GridMap node in the inspector.")
         
-    # THE TRICK: Shrink the vertical grid step size. 
-    # This turns the integer Y grid into a high-resolution "float" grid.
-    # The actual voxel meshes will NOT shrink, they just get placed with float precision.
     cell_size.y = 1.0 / VERTICAL_SMOOTHNESS
-        
-    generate_new_cubes_from_position(last_player_grid_pos.x, last_player_grid_pos.y)
 
 func _process(delta: float) -> void:
-    var current_grid_x = round(player.position.x)
-    var current_grid_z = round(player.position.z)
-    var current_grid_pos = Vector2i(current_grid_x, current_grid_z)
+    # 1. Convert player world coordinates to Chunk Coordinates
+    # We use floor() and float division to handle negative world coordinates correctly
+    var current_chunk_x = floor(player.position.x / float(CHUNK_SIZE))
+    var current_chunk_z = floor(player.position.z / float(CHUNK_SIZE))
+    var current_chunk = Vector2i(current_chunk_x, current_chunk_z)
     
-    if current_grid_pos != last_player_grid_pos:
-        last_player_grid_pos = current_grid_pos
-        generate_new_cubes_from_position(current_grid_x, current_grid_z)
+    # 2. Only update the world if the player crosses a chunk boundary
+    if current_chunk != last_player_chunk:
+        last_player_chunk = current_chunk
+        update_chunks(current_chunk)
 
-func generate_new_cubes_from_position(player_x: int, player_z: int):
-    var start_x = player_x - GENERATION_BOUND_DISTANCE
-    var end_x = player_x + GENERATION_BOUND_DISTANCE
-    var start_z = player_z - GENERATION_BOUND_DISTANCE
-    var end_z = player_z + GENERATION_BOUND_DISTANCE
+func update_chunks(player_chunk: Vector2i):
+    var chunks_in_range = []
+    
+    # --- GENERATION PHASE ---
+    # Loop through a grid of chunks centered on the player
+    for cx in range(-CHUNK_RENDER_DISTANCE, CHUNK_RENDER_DISTANCE + 1):
+        for cz in range(-CHUNK_RENDER_DISTANCE, CHUNK_RENDER_DISTANCE + 1):
+            var target_chunk = player_chunk + Vector2i(cx, cz)
+            chunks_in_range.append(target_chunk)
+            
+            # If the chunk isn't loaded yet, generate it
+            if not active_chunks.has(target_chunk):
+                generate_chunk(target_chunk)
 
-    for x in range(start_x, end_x):
-        for z in range(start_z, end_z):
-            generate_cube_if_new(x, z)
+    # --- DESPAWN PHASE ---
+    if ENABLE_CHUNK_DESPAWNING:
+        var chunks_to_remove = []
+        
+        # Check all currently loaded chunks
+        for chunk in active_chunks:
+            # If a loaded chunk is no longer in our local range, queue it for deletion
+            if not chunk in chunks_in_range:
+                despawn_chunk(chunk)
+                chunks_to_remove.append(chunk)
+                
+        # Remove them from our tracking dictionary safely
+        for chunk in chunks_to_remove:
+            active_chunks.erase(chunk)
 
-func generate_cube_if_new(x: int, z: int):
-    var generated_noise = noise.get_noise_2d(x, z)
+func generate_chunk(chunk_pos: Vector2i):
+    # Convert chunk coordinates back to world coordinates for the start of the loop
+    var start_x = chunk_pos.x * CHUNK_SIZE
+    var start_z = chunk_pos.y * CHUNK_SIZE
     
-    # Calculate the true float Y position
-    var float_y = generated_noise * VERTICAL_AMPLITUDE
+    for x in range(start_x, start_x + CHUNK_SIZE):
+        for z in range(start_z, start_z + CHUNK_SIZE):
+            var generated_noise = noise.get_noise_2d(x, z)
+            var float_y = generated_noise * VERTICAL_AMPLITUDE
+            var grid_y = round(float_y * VERTICAL_SMOOTHNESS)
+            
+            if get_cell_item(Vector3i(x, grid_y, z)) == INVALID_CELL_ITEM:
+                var block_id = get_block_id_from_noise(generated_noise)
+                set_cell_item(Vector3i(x, grid_y, z), block_id)
+                
+    # Mark this chunk as active so we don't generate it again
+    active_chunks[chunk_pos] = true
+
+func despawn_chunk(chunk_pos: Vector2i):
+    var start_x = chunk_pos.x * CHUNK_SIZE
+    var start_z = chunk_pos.y * CHUNK_SIZE
     
-    # Map the float Y to our new high-resolution vertical integer grid
-    var grid_y = round(float_y * VERTICAL_SMOOTHNESS)
-    
-    if get_cell_item(Vector3i(x, grid_y, z)) == INVALID_CELL_ITEM:
-        var block_id = get_block_id_from_noise(generated_noise)
-        set_cell_item(Vector3i(x, grid_y, z), block_id)
+    for x in range(start_x, start_x + CHUNK_SIZE):
+        for z in range(start_z, start_z + CHUNK_SIZE):
+            # Recalculate the Y position to find exactly where the block is to delete it
+            var generated_noise = noise.get_noise_2d(x, z)
+            var float_y = generated_noise * VERTICAL_AMPLITUDE
+            var grid_y = round(float_y * VERTICAL_SMOOTHNESS)
+            
+            set_cell_item(Vector3i(x, grid_y, z), INVALID_CELL_ITEM)
 
 func get_block_id_from_noise(noise_value: float) -> int:
     if noise_value <= -0.4: return BLOCK_RED

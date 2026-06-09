@@ -1,7 +1,7 @@
 extends CharacterBody3D
 
-const SPEED = 5.0
-const FLY_SPEED = 6.0  # Separate speed for flying if you want it faster/slower
+@export var SPEED = 5.0
+@export var FLY_SPEED = 6.0  # Separate speed for flying if you want it faster/slower
 const JUMP_VELOCITY = 4.5
 
 var fly: bool = false
