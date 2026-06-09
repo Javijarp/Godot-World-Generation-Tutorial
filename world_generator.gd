@@ -7,6 +7,8 @@ var noise
 var player
 var generated_cubes
 
+var last_player_grid_pos = Vector2i.ZERO
+
 var material_cache = {}
 
 func _ready():
@@ -20,10 +22,17 @@ func _ready():
 	material_cache[0.2] = create_material(Color(0.5, 0.5, 0.5, 1))
 	material_cache[1.0] = create_material(Color(0.3, 0.8, 0.5, 1))
 
+	last_player_grid_pos = Vector2i(round(player.position.x), round(player.position.z))
 	generate_new_cubes_from_position(player.position)
 
 func _process(delta):
-	generate_new_cubes_from_position(player.position)
+	var current_grid_x = round(player.position.x)
+	var current_grid_z = round(player.position.z)
+	var current_grid_pos = Vector2i(current_grid_x, current_grid_z)
+
+	if current_grid_pos != last_player_grid_pos:
+		last_player_grid_pos = current_grid_pos
+		generate_new_cubes_from_position(current_grid_pos)
 
 func create_cube(position, mat):
 	var box_size = Vector3(1, 1, 1)
@@ -49,16 +58,21 @@ func create_cube(position, mat):
 	add_child(static_body)
 
 func generate_new_cubes_from_position(player_position):
-	for x in range(GENERATION_BOUND_DISTANCE * 2):
-		x += (player_position.x - GENERATION_BOUND_DISTANCE)
-		for z in range(GENERATION_BOUND_DISTANCE * 2):
-			z += (player_position.z - GENERATION_BOUND_DISTANCE)
+
+	var start_x = player_position.x - GENERATION_BOUND_DISTANCE
+	var end_x = player_position.x + GENERATION_BOUND_DISTANCE
+	var start_z = player_position.y - GENERATION_BOUND_DISTANCE
+	var end_z = player_position.y + GENERATION_BOUND_DISTANCE
+
+	for x in range(start_x, end_x):
+		for z in range(start_z, end_z):
 			generate_cube_if_new(x, z)
 
 func generate_cube_if_new(x, z):
 	if !has_cube_been_generated(x, z):
 		var generated_noise = noise.get_noise_2d(x, z)
-		create_cube(Vector3(x, generated_noise * VERTICAL_AMPLITUDE, z), get_cached_material_from_noise(generated_noise))
+		var target_pos = Vector3(x, round(generated_noise * VERTICAL_AMPLITUDE), z)
+		create_cube(target_pos, get_cached_material_from_noise(generated_noise))
 		register_cube_generation_at_coordinate(x, z)
 
 func has_cube_been_generated(x, z):
