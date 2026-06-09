@@ -27,6 +27,8 @@ script = ExtResource("2_1bvp3")
 
 [node name="World Generator" type="Node" parent="." unique_id=937196888]
 
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=813052421]
+
 [node name="Player" type="CharacterBody3D" parent="." unique_id=1144966591]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6035173, 0)
 script = ExtResource("2_0xm2m")
