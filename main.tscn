@@ -1,7 +1,8 @@
 [gd_scene format=3 uid="uid://daig7svuxaba0"]
 
-[ext_resource type="Script" uid="uid://r73jnfi5ilmj" path="res://world_generator.gd" id="1_ig7tw"]
 [ext_resource type="Script" uid="uid://cln4efwcqjqkx" path="res://player.gd" id="2_0xm2m"]
+[ext_resource type="Script" uid="uid://ngvp24umrxkf" path="res://grid_map_world_generator.gd" id="2_1bvp3"]
+[ext_resource type="MeshLibrary" uid="uid://d2oi6o3mr0uho" path="res://blocks.tres" id="3_1bvp3"]
 [ext_resource type="Script" uid="uid://dxuya5tmhnp4w" path="res://fpscounter.gd" id="3_h2yge"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_0xm2m"]
@@ -19,9 +20,12 @@ sky = SubResource("Sky_0xm2m")
 
 [node name="Main" type="Node" unique_id=636397226]
 
+[node name="GridMap" type="GridMap" parent="." unique_id=520241161]
+mesh_library = ExtResource("3_1bvp3")
+cell_size = Vector3(1, 1, 1)
+script = ExtResource("2_1bvp3")
+
 [node name="World Generator" type="Node" parent="." unique_id=937196888]
-script = ExtResource("1_ig7tw")
-GENERATION_BOUND_DISTANCE = 64
 
 [node name="Player" type="CharacterBody3D" parent="." unique_id=1144966591]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6035173, 0)
