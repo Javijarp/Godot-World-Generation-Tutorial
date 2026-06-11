@@ -24,7 +24,6 @@ sky = SubResource("Sky_0xm2m")
 mesh_library = ExtResource("3_1bvp3")
 cell_size = Vector3(1, 1, 1)
 script = ExtResource("2_1bvp3")
-ENABLE_CHUNK_DESPAWNING = false
 
 [node name="World Generator" type="Node" parent="." unique_id=937196888]
 
@@ -33,6 +32,7 @@ ENABLE_CHUNK_DESPAWNING = false
 [node name="Player" type="CharacterBody3D" parent="." unique_id=1144966591]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6035173, 0)
 script = ExtResource("2_0xm2m")
+FLY_SPEED = 40.0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Player" unique_id=237093713]
 shape = SubResource("CapsuleShape3D_0xm2m")
@@ -41,7 +41,7 @@ shape = SubResource("CapsuleShape3D_0xm2m")
 mesh = SubResource("CapsuleMesh_h2yge")
 
 [node name="Camera3D" type="Camera3D" parent="Player" unique_id=351589215]
-transform = Transform3D(1, 0, 0, 0, 0.96690357, 0.255142, 0, -0.255142, 0.96690357, 0, 1.0866213, 2.2939386)
+transform = Transform3D(1, 0, 0, 0, 0.96682334, 0.25544575, 0, -0.25544575, 0.96682334, 0, 0.8550734, 0.038291268)
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1790309494]
 environment = SubResource("Environment_h2yge")
